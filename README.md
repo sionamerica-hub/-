@@ -25,7 +25,19 @@ In this game, you play as an "Editor" who casts spells by combining words. The s
 
 ## How to Run
 
-### GUI Version (Recommended)
+### Web Version (Recommended) 🌐
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the Flask server
+python3 app.py
+
+# Open your browser and go to:
+# http://localhost:5000
+```
+
+### GUI Version (Desktop)
 ```bash
 python3 babel_gui.py
 ```
