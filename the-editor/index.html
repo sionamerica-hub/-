@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Editor - 텍스트 로그라이크 어드벤처</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- START_SCREEN -->
+        <div id="start-screen" class="screen active">
+            <div class="screen-content">
+                <div class="typewriter-icon">⌨️</div>
+                <h1 class="game-title">THE EDITOR</h1>
+                <p class="game-subtitle">텍스트가 곧 물리 법칙인 세계</p>
+                <button id="start-btn" class="btn-primary">시작하기</button>
+            </div>
+        </div>
+
+        <!-- INTRO_NARRATIVE -->
+        <div id="intro-screen" class="screen">
+            <div class="screen-content">
+                <h2>프롤로그</h2>
+                <div class="narrative-box">
+                    <div id="intro-text" class="typewriter-text"></div>
+                </div>
+                <button id="intro-continue-btn" class="btn-primary" style="display: none;">챕터 1 시작</button>
+            </div>
+        </div>
+
+        <!-- CHAPTER_EXPLORE -->
+        <div id="explore-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="chapter-title"></h2>
+                    <p id="chapter-subtitle" class="chapter-subtitle"></p>
+                </div>
+                
+                <div class="situation-box">
+                    <h3>상황</h3>
+                    <div id="situation-text" class="situation-text"></div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <h4>📚 단어 덱</h4>
+                        <div id="deck-display" class="word-list"></div>
+                    </div>
+                    <div class="stat-box">
+                        <h4>❤️ 상태</h4>
+                        <div class="bar-container">
+                            <label>체력</label>
+                            <div class="progress-bar">
+                                <div id="hp-bar" class="bar-fill hp-fill"></div>
+                                <span id="hp-text" class="bar-text">100/100</span>
+                            </div>
+                        </div>
+                        <div class="bar-container">
+                            <label>잉크</label>
+                            <div class="progress-bar">
+                                <div id="ink-bar" class="bar-fill ink-fill"></div>
+                                <span id="ink-text" class="bar-text">20/20</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="explore-continue-btn" class="btn-primary">다음으로</button>
+            </div>
+        </div>
+
+        <!-- CHAPTER_COMBAT -->
+        <div id="combat-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="combat-chapter-title"></h2>
+                </div>
+
+                <!-- 적 정보 -->
+                <div class="enemy-box">
+                    <h3 id="enemy-name"></h3>
+                    <p id="enemy-desc" class="enemy-desc"></p>
+                    <div class="bar-container">
+                        <label>적 체력</label>
+                        <div class="progress-bar">
+                            <div id="enemy-hp-bar" class="bar-fill enemy-fill"></div>
+                            <span id="enemy-hp-text" class="bar-text">0/0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 조합 슬롯 -->
+                <div class="combination-box">
+                    <h3>✏️ 문장 조합</h3>
+                    <div class="slots-grid">
+                        <div class="slot" data-slot="subject">
+                            <div class="slot-label">주어/속성</div>
+                            <div id="slot-subject" class="slot-content">비어있음</div>
+                        </div>
+                        <div class="slot" data-slot="verb">
+                            <div class="slot-label">동사/형태</div>
+                            <div id="slot-verb" class="slot-content">비어있음</div>
+                        </div>
+                        <div class="slot" data-slot="modifier">
+                            <div class="slot-label">부사/강도</div>
+                            <div id="slot-modifier" class="slot-content">선택사항</div>
+                        </div>
+                    </div>
+                    <div id="action-preview" class="action-preview"></div>
+                    <button id="execute-btn" class="btn-primary" disabled>실행</button>
+                </div>
+
+                <!-- 손패 -->
+                <div class="hand-box">
+                    <h4>손패</h4>
+                    <div id="hand-display" class="word-buttons"></div>
+                </div>
+
+                <!-- 플레이어 상태 -->
+                <div class="player-stats">
+                    <div class="bar-container">
+                        <label>체력</label>
+                        <div class="progress-bar">
+                            <div id="combat-hp-bar" class="bar-fill hp-fill"></div>
+                            <span id="combat-hp-text" class="bar-text">100/100</span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <label>잉크</label>
+                        <div class="progress-bar">
+                            <div id="combat-ink-bar" class="bar-fill ink-fill"></div>
+                            <span id="combat-ink-text" class="bar-text">20/20</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHAPTER_PUZZLE -->
+        <div id="puzzle-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="puzzle-chapter-title"></h2>
+                </div>
+
+                <div class="puzzle-box">
+                    <h3>문맥 수정</h3>
+                    <div id="puzzle-text" class="puzzle-text"></div>
+                    <div id="puzzle-solutions" class="puzzle-solutions"></div>
+                    <div id="puzzle-result" class="puzzle-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENDING_CRAFTING -->
+        <div id="ending-screen" class="screen">
+            <div class="screen-content">
+                <div class="typewriter-icon">⌨️</div>
+                <h2>최종 편집</h2>
+                <p class="subtitle">모은 단어로 이야기의 결말을 짓으세요</p>
+                
+                <div class="ending-box">
+                    <div id="ending-sentence" class="ending-sentence"></div>
+                    <div class="ending-words-box">
+                        <h4>사용 가능한 단어 (3개 선택)</h4>
+                        <div id="ending-words" class="word-buttons"></div>
+                    </div>
+                    <button id="craft-ending-btn" class="btn-primary" disabled>결말 완성하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUCCESS -->
+        <div id="success-screen" class="screen">
+            <div class="screen-content">
+                <div class="success-icon">✓</div>
+                <h2 id="ending-title"></h2>
+                <div class="ending-text-box">
+                    <p id="ending-text" class="ending-text"></p>
+                    <p id="ending-score" class="ending-score"></p>
+                </div>
+                <button id="restart-btn" class="btn-primary">다시 시작하기</button>
+            </div>
+        </div>
+
+        <!-- GAME_OVER -->
+        <div id="gameover-screen" class="screen">
+            <div class="screen-content">
+                <div class="gameover-icon">✗</div>
+                <h2>게임 오버</h2>
+                <p class="gameover-text">당신의 체력이 0이 되었습니다.</p>
+                <p class="gameover-text">이야기는 미완성으로 남았습니다.</p>
+                <button id="restart-gameover-btn" class="btn-primary">다시 시작하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
