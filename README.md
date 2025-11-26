@@ -21,9 +21,16 @@ In this game, you play as an "Editor" who casts spells by combining words. The s
   - Heavy + Water + Wall = High Defense Barrier
 - **Status Effects**: Burning, Frozen, Electrocuted, Armor Broken, Poisoned
 - **Creative Combinations**: Over 15 words with multiple interaction possibilities
+- **Graphical Interface**: Modern GUI with visual HP/Mana bars and intuitive word selection
 
 ## How to Run
 
+### GUI Version (Recommended)
+```bash
+python3 babel_gui.py
+```
+
+### Text-Based Version
 ```bash
 python3 babel_rpg.py
 ```
