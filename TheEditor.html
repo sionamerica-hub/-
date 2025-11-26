@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Editor - 텍스트 로그라이크 어드벤처</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            background: #F5F5DC;
+            color: #2F2F2F;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        #game-container {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .screen {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .screen-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .typewriter-icon {
+            font-size: 80px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 4rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            color: #2F2F2F;
+        }
+
+        .game-subtitle {
+            font-size: 1.5rem;
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .btn-primary {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: #2F2F2F;
+            color: #F5F5DC;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1a1a1a;
+        }
+
+        .btn-primary:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .narrative-box {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 5px;
+            margin: 20px 0;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+
+        .typewriter-text {
+            white-space: pre-wrap;
+            min-height: 200px;
+        }
+
+        .chapter-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .chapter-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .chapter-subtitle {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .situation-box {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .situation-box h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .situation-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        .word-button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background: #FFD700;
+            color: #2F2F2F;
+            border: 2px solid #FFA500;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .word-button:hover {
+            background: #FFA500;
+            transform: scale(1.05);
+        }
+
+        .word-button.extracting {
+            animation: wordExtract 0.5s ease-out forwards;
+        }
+
+        @keyframes wordExtract {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
+            100% { transform: scale(0) rotate(-10deg); opacity: 0; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .stat-box h4 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .word-tag {
+            padding: 5px 12px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+
+        .bar-container {
+            margin-bottom: 15px;
+        }
+
+        .bar-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            position: relative;
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .hp-fill {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .ink-fill {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .enemy-fill {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .bar-text {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 1;
+        }
+
+        .enemy-box {
+            background: #ffe0e0;
+            padding: 25px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            border: 2px solid #ff9999;
+        }
+
+        .enemy-box h3 {
+            font-size: 1.8rem;
+            color: #c0392b;
+            margin-bottom: 10px;
+        }
+
+        .enemy-desc {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .combination-box {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .combination-box h3 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .slot {
+            border: 2px dashed #999;
+            border-radius: 5px;
+            padding: 20px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+        }
+
+        .slot-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .slot-content {
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .slot-content.filled {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+        }
+
+        .action-preview {
+            background: #fff9c4;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 2px solid #fdd835;
+            display: none;
+        }
+
+        .action-preview.show {
+            display: block;
+        }
+
+        .action-preview p {
+            margin: 5px 0;
+        }
+
+        .hand-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .hand-box h4 {
+            margin-bottom: 15px;
+        }
+
+        .word-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hand-word {
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: 2px solid;
+        }
+
+        .hand-word.noun {
+            background: #bbdefb;
+            border-color: #2196F3;
+            color: #0d47a1;
+        }
+
+        .hand-word.verb {
+            background: #ffcdd2;
+            border-color: #f44336;
+            color: #b71c1c;
+        }
+
+        .hand-word.adjective {
+            background: #c8e6c9;
+            border-color: #4CAF50;
+            color: #1b5e20;
+        }
+
+        .hand-word:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .hand-word.selected {
+            background: #FFD700;
+            border-color: #FFA500;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        }
+
+        .player-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .puzzle-box {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 5px;
+        }
+
+        .puzzle-text {
+            font-size: 1.5rem;
+            line-height: 2;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .puzzle-solutions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .puzzle-solution {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .puzzle-solution:hover:not(.disabled) {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+
+        .puzzle-solution.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5;
+        }
+
+        .puzzle-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #c8e6c9;
+            border: 2px solid #4CAF50;
+            border-radius: 5px;
+            color: #1b5e20;
+            font-weight: bold;
+        }
+
+        .ending-box {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+
+        .ending-sentence {
+            font-size: 1.5rem;
+            line-height: 2;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 5px;
+            border: 2px dashed #999;
+        }
+
+        .ending-word-slot {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 0 5px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .ending-word-slot.empty {
+            background: #e0e0e0;
+            color: #999;
+        }
+
+        .ending-words-box {
+            margin-bottom: 30px;
+        }
+
+        .ending-words-box h4 {
+            margin-bottom: 15px;
+        }
+
+        .ending-word-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: 2px solid;
+            background: #e0e0e0;
+            border-color: #999;
+        }
+
+        .ending-word-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .ending-word-btn.selected {
+            background: #4CAF50;
+            border-color: #2e7d32;
+            color: white;
+        }
+
+        .success-icon, .gameover-icon {
+            font-size: 80px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .success-icon {
+            color: #4CAF50;
+        }
+
+        .gameover-icon {
+            color: #f44336;
+        }
+
+        .ending-text-box {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 5px;
+            margin: 30px 0;
+        }
+
+        .ending-text {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .ending-score {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .gameover-text {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .whiteout {
+            animation: whiteout 0.3s ease-in-out;
+        }
+
+        @keyframes whiteout {
+            0% { background-color: #F5F5DC; }
+            50% { background-color: #FFFFFF; }
+            100% { background-color: #F5F5DC; }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid,
+            .slots-grid,
+            .player-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-title {
+                font-size: 2.5rem;
+            }
+            
+            .screen-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- START_SCREEN -->
+        <div id="start-screen" class="screen active">
+            <div class="screen-content">
+                <div class="typewriter-icon">⌨️</div>
+                <h1 class="game-title">THE EDITOR</h1>
+                <p class="game-subtitle">텍스트가 곧 물리 법칙인 세계</p>
+                <button id="start-btn" class="btn-primary">시작하기</button>
+            </div>
+        </div>
+
+        <!-- INTRO_NARRATIVE -->
+        <div id="intro-screen" class="screen">
+            <div class="screen-content">
+                <h2>프롤로그</h2>
+                <div class="narrative-box">
+                    <div id="intro-text" class="typewriter-text"></div>
+                </div>
+                <button id="intro-continue-btn" class="btn-primary" style="display: none;">챕터 1 시작</button>
+            </div>
+        </div>
+
+        <!-- CHAPTER_EXPLORE -->
+        <div id="explore-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="chapter-title"></h2>
+                    <p id="chapter-subtitle" class="chapter-subtitle"></p>
+                </div>
+                
+                <div class="situation-box">
+                    <h3>상황</h3>
+                    <div id="situation-text" class="situation-text"></div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <h4>📚 단어 덱</h4>
+                        <div id="deck-display" class="word-list"></div>
+                    </div>
+                    <div class="stat-box">
+                        <h4>❤️ 상태</h4>
+                        <div class="bar-container">
+                            <label>체력</label>
+                            <div class="progress-bar">
+                                <div id="hp-bar" class="bar-fill hp-fill"></div>
+                                <span id="hp-text" class="bar-text">100/100</span>
+                            </div>
+                        </div>
+                        <div class="bar-container">
+                            <label>잉크</label>
+                            <div class="progress-bar">
+                                <div id="ink-bar" class="bar-fill ink-fill"></div>
+                                <span id="ink-text" class="bar-text">20/20</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="explore-continue-btn" class="btn-primary">다음으로</button>
+            </div>
+        </div>
+
+        <!-- CHAPTER_COMBAT -->
+        <div id="combat-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="combat-chapter-title"></h2>
+                </div>
+
+                <!-- 적 정보 -->
+                <div class="enemy-box">
+                    <h3 id="enemy-name"></h3>
+                    <p id="enemy-desc" class="enemy-desc"></p>
+                    <div class="bar-container">
+                        <label>적 체력</label>
+                        <div class="progress-bar">
+                            <div id="enemy-hp-bar" class="bar-fill enemy-fill"></div>
+                            <span id="enemy-hp-text" class="bar-text">0/0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 조합 슬롯 -->
+                <div class="combination-box">
+                    <h3>✏️ 문장 조합</h3>
+                    <div class="slots-grid">
+                        <div class="slot" data-slot="subject">
+                            <div class="slot-label">주어/속성</div>
+                            <div id="slot-subject" class="slot-content">비어있음</div>
+                        </div>
+                        <div class="slot" data-slot="verb">
+                            <div class="slot-label">동사/형태</div>
+                            <div id="slot-verb" class="slot-content">비어있음</div>
+                        </div>
+                        <div class="slot" data-slot="modifier">
+                            <div class="slot-label">부사/강도</div>
+                            <div id="slot-modifier" class="slot-content">선택사항</div>
+                        </div>
+                    </div>
+                    <div id="action-preview" class="action-preview"></div>
+                    <button id="execute-btn" class="btn-primary" disabled>실행</button>
+                </div>
+
+                <!-- 손패 -->
+                <div class="hand-box">
+                    <h4>손패</h4>
+                    <div id="hand-display" class="word-buttons"></div>
+                </div>
+
+                <!-- 플레이어 상태 -->
+                <div class="player-stats">
+                    <div class="bar-container">
+                        <label>체력</label>
+                        <div class="progress-bar">
+                            <div id="combat-hp-bar" class="bar-fill hp-fill"></div>
+                            <span id="combat-hp-text" class="bar-text">100/100</span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <label>잉크</label>
+                        <div class="progress-bar">
+                            <div id="combat-ink-bar" class="bar-fill ink-fill"></div>
+                            <span id="combat-ink-text" class="bar-text">20/20</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHAPTER_PUZZLE -->
+        <div id="puzzle-screen" class="screen">
+            <div class="screen-content">
+                <div class="chapter-header">
+                    <h2 id="puzzle-chapter-title"></h2>
+                </div>
+
+                <div class="puzzle-box">
+                    <h3>문맥 수정</h3>
+                    <div id="puzzle-text" class="puzzle-text"></div>
+                    <div id="puzzle-solutions" class="puzzle-solutions"></div>
+                    <div id="puzzle-result" class="puzzle-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENDING_CRAFTING -->
+        <div id="ending-screen" class="screen">
+            <div class="screen-content">
+                <div class="typewriter-icon">⌨️</div>
+                <h2>최종 편집</h2>
+                <p class="subtitle">모은 단어로 이야기의 결말을 짓으세요</p>
+                
+                <div class="ending-box">
+                    <div id="ending-sentence" class="ending-sentence"></div>
+                    <div class="ending-words-box">
+                        <h4>사용 가능한 단어 (3개 선택)</h4>
+                        <div id="ending-words" class="word-buttons"></div>
+                    </div>
+                    <button id="craft-ending-btn" class="btn-primary" disabled>결말 완성하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUCCESS -->
+        <div id="success-screen" class="screen">
+            <div class="screen-content">
+                <div class="success-icon">✓</div>
+                <h2 id="ending-title"></h2>
+                <div class="ending-text-box">
+                    <p id="ending-text" class="ending-text"></p>
+                    <p id="ending-score" class="ending-score"></p>
+                </div>
+                <button id="restart-btn" class="btn-primary">다시 시작하기</button>
+            </div>
+        </div>
+
+        <!-- GAME_OVER -->
+        <div id="gameover-screen" class="screen">
+            <div class="screen-content">
+                <div class="gameover-icon">✗</div>
+                <h2>게임 오버</h2>
+                <p class="gameover-text">당신의 체력이 0이 되었습니다.</p>
+                <p class="gameover-text">이야기는 미완성으로 남았습니다.</p>
+                <button id="restart-gameover-btn" class="btn-primary">다시 시작하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        const GAME_STATES = {
+            START_SCREEN: 'START_SCREEN',
+            INTRO_NARRATIVE: 'INTRO_NARRATIVE',
+            CHAPTER_EXPLORE: 'CHAPTER_EXPLORE',
+            CHAPTER_COMBAT: 'CHAPTER_COMBAT',
+            CHAPTER_PUZZLE: 'CHAPTER_PUZZLE',
+            ENDING_CRAFTING: 'ENDING_CRAFTING',
+            GAME_OVER: 'GAME_OVER',
+            SUCCESS: 'SUCCESS'
+        };
+
+        // 챕터 데이터
+        const CHAPTERS = [
+            {
+                id: 1,
+                title: '명사의 숲',
+                subtitle: 'The Forest of Nouns',
+                situation: '희미한 [안개] 숲. 이름 없는 [나무]가 길을 막고 있다. [돌]이 발밑에 굴러다닌다. [나]는 길을 잃었다.',
+                mineableWords: ['안개', '나무', '돌', '나'],
+                enemy: {
+                    name: '형체 없는 그림자',
+                    hp: 30,
+                    maxHp: 30,
+                    attack: 5,
+                    description: '텍스트의 의미를 잃어버린 존재'
+                },
+                type: 'explore'
+            },
+            {
+                id: 2,
+                title: '동사의 탑',
+                subtitle: 'The Tower of Verbs',
+                situation: '거대한 탑이 하늘을 [찌르다]. 적들이 우리를 [추격하다]. [막다]로 방어하고, [부수다]로 공격하라. [달리다]로 도망칠 수도 있다.',
+                mineableWords: ['찌르다', '추격하다', '막다', '부수다', '달리다'],
+                enemy: {
+                    name: '검열관',
+                    hp: 50,
+                    maxHp: 50,
+                    attack: 8,
+                    description: '모든 동사를 통제하려는 자'
+                },
+                type: 'combat'
+            },
+            {
+                id: 3,
+                title: '형용사의 바다',
+                subtitle: 'The Sea of Adjectives',
+                situation: '[우울한] 파도가 친다. 바다는 [끝없는] 깊이를 가졌다. [차가운] 바람이 불어온다. [거대한] 고래가 나타났다. [신성한] 빛이 내려온다.',
+                mineableWords: ['우울한', '끝없는', '차가운', '거대한', '신성한'],
+                puzzle: {
+                    text: '파도가 [거칠게] 몰아친다',
+                    target: '거칠게',
+                    solutions: [
+                        { word: '잠잠하게', type: 'peaceful' },
+                        { word: '얼어붙은', type: 'frozen' },
+                        { word: '따뜻하게', type: 'warm' }
+                    ]
+                },
+                type: 'puzzle'
+            }
+        ];
+
+        // 단어 태그 시스템
+        const WORD_TAGS = {
+            '나': { type: 'noun', element: 'self', cost: 2, category: 'subject' },
+            '안개': { type: 'noun', element: 'mist', cost: 3, category: 'subject' },
+            '나무': { type: 'noun', element: 'wood', cost: 3, category: 'subject' },
+            '돌': { type: 'noun', element: 'earth', cost: 2, category: 'subject' },
+            '찌르다': { type: 'verb', action: 'attack', power: 8, cost: 5, category: 'verb' },
+            '추격하다': { type: 'verb', action: 'chase', power: 3, cost: 4, category: 'verb' },
+            '막다': { type: 'verb', action: 'defend', shield: 10, cost: 4, category: 'verb' },
+            '부수다': { type: 'verb', action: 'attack', power: 12, cost: 6, category: 'verb' },
+            '달리다': { type: 'verb', action: 'dodge', shield: 5, cost: 3, category: 'verb' },
+            '우울한': { type: 'adjective', mood: 'sad', value: -1, cost: 2, category: 'modifier' },
+            '끝없는': { type: 'adjective', mood: 'abstract', value: 0, cost: 3, category: 'modifier' },
+            '차가운': { type: 'adjective', element: 'ice', value: 0, cost: 2, category: 'modifier' },
+            '거대한': { type: 'adjective', size: 'large', value: 1, cost: 3, category: 'modifier' },
+            '신성한': { type: 'adjective', mood: 'holy', value: 2, cost: 4, category: 'modifier' },
+            '거칠게': { type: 'adjective', mood: 'chaos', value: -1, cost: 2, category: 'modifier' },
+            '잠잠하게': { type: 'adjective', mood: 'peaceful', value: 1, cost: 2, category: 'modifier' },
+            '얼어붙은': { type: 'adjective', element: 'ice', value: 0, cost: 3, category: 'modifier' },
+            '따뜻하게': { type: 'adjective', mood: 'warm', value: 1, cost: 2, category: 'modifier' }
+        };
+
+        // 엔딩 템플릿
+        const ENDING_TEMPLATES = {
+            happy: {
+                title: '희망의 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 모든 것이 평화롭게 이어졌다.',
+                threshold: 3
+            },
+            sad: {
+                title: '슬픈 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 하지만 희망은 남아있었다.',
+                threshold: -2
+            },
+            abstract: {
+                title: '모호한 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 의미는 각자에게 달려있었다.',
+                threshold: -1
+            }
+        };
+
+        // 게임 상태 관리
+        class GameState {
+            constructor() {
+                this.currentState = GAME_STATES.START_SCREEN;
+                this.currentChapter = 0;
+                this.playerDeck = [];
+                this.playerHand = [];
+                this.playerHp = 100;
+                this.playerMaxHp = 100;
+                this.ink = 20;
+                this.maxInk = 20;
+                this.enemyHp = 0;
+                this.enemyMaxHp = 0;
+                this.combatSlots = { subject: null, verb: null, modifier: null };
+                this.endingWords = [];
+                this.endingScore = 0;
+                this.endingType = 'abstract';
+                this.puzzleSolved = false;
+            }
+
+            changeState(newState) {
+                this.currentState = newState;
+                this.updateScreen();
+            }
+
+            updateScreen() {
+                document.querySelectorAll('.screen').forEach(screen => {
+                    screen.classList.remove('active');
+                });
+
+                const screenMap = {
+                    [GAME_STATES.START_SCREEN]: 'start-screen',
+                    [GAME_STATES.INTRO_NARRATIVE]: 'intro-screen',
+                    [GAME_STATES.CHAPTER_EXPLORE]: 'explore-screen',
+                    [GAME_STATES.CHAPTER_COMBAT]: 'combat-screen',
+                    [GAME_STATES.CHAPTER_PUZZLE]: 'puzzle-screen',
+                    [GAME_STATES.ENDING_CRAFTING]: 'ending-screen',
+                    [GAME_STATES.SUCCESS]: 'success-screen',
+                    [GAME_STATES.GAME_OVER]: 'gameover-screen'
+                };
+
+                const screenId = screenMap[this.currentState];
+                if (screenId) {
+                    document.getElementById(screenId).classList.add('active');
+                }
+            }
+
+            drawHand() {
+                const handSize = Math.min(7, this.playerDeck.length);
+                const shuffled = [...this.playerDeck].sort(() => Math.random() - 0.5);
+                this.playerHand = shuffled.slice(0, handSize);
+            }
+
+            reset() {
+                this.currentState = GAME_STATES.START_SCREEN;
+                this.currentChapter = 0;
+                this.playerDeck = [];
+                this.playerHand = [];
+                this.playerHp = 100;
+                this.playerMaxHp = 100;
+                this.ink = 20;
+                this.maxInk = 20;
+                this.enemyHp = 0;
+                this.enemyMaxHp = 0;
+                this.combatSlots = { subject: null, verb: null, modifier: null };
+                this.endingWords = [];
+                this.endingScore = 0;
+                this.endingType = 'abstract';
+                this.puzzleSolved = false;
+            }
+        }
+
+        const game = new GameState();
+
+        function typewriterEffect(element, text, speed = 50, callback) {
+            let index = 0;
+            element.textContent = '';
+            
+            function type() {
+                if (index < text.length) {
+                    element.textContent += text[index];
+                    index++;
+                    setTimeout(type, speed);
+                } else if (callback) {
+                    callback();
+                }
+            }
+            
+            type();
+        }
+
+        function parseSituationText(text) {
+            const parts = [];
+            const regex = /\[([^\]]+)\]/g;
+            let lastIndex = 0;
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    parts.push({
+                        type: 'text',
+                        content: text.substring(lastIndex, match.index)
+                    });
+                }
+                parts.push({
+                    type: 'word',
+                    content: match[1],
+                    fullMatch: match[0]
+                });
+                lastIndex = regex.lastIndex;
+            }
+
+            if (lastIndex < text.length) {
+                parts.push({
+                    type: 'text',
+                    content: text.substring(lastIndex)
+                });
+            }
+
+            return parts;
+        }
+
+        function updateBars() {
+            const hpPercent = (game.playerHp / game.playerMaxHp) * 100;
+            document.getElementById('hp-bar').style.width = hpPercent + '%';
+            document.getElementById('hp-text').textContent = `${game.playerHp}/${game.playerMaxHp}`;
+            document.getElementById('combat-hp-bar').style.width = hpPercent + '%';
+            document.getElementById('combat-hp-text').textContent = `${game.playerHp}/${game.playerMaxHp}`;
+
+            const inkPercent = (game.ink / game.maxInk) * 100;
+            document.getElementById('ink-bar').style.width = inkPercent + '%';
+            document.getElementById('ink-text').textContent = `${game.ink}/${game.maxInk}`;
+            document.getElementById('combat-ink-bar').style.width = inkPercent + '%';
+            document.getElementById('combat-ink-text').textContent = `${game.ink}/${game.maxInk}`;
+
+            if (game.enemyMaxHp > 0) {
+                const enemyPercent = (game.enemyHp / game.enemyMaxHp) * 100;
+                document.getElementById('enemy-hp-bar').style.width = enemyPercent + '%';
+                document.getElementById('enemy-hp-text').textContent = `${game.enemyHp}/${game.enemyMaxHp}`;
+            }
+        }
+
+        function updateDeckDisplay() {
+            const deckDisplay = document.getElementById('deck-display');
+            deckDisplay.innerHTML = '';
+            
+            if (game.playerDeck.length === 0) {
+                deckDisplay.innerHTML = '<p style="color: #999;">아직 수집한 단어가 없습니다</p>';
+            } else {
+                game.playerDeck.forEach(word => {
+                    const tag = document.createElement('span');
+                    tag.className = 'word-tag';
+                    tag.textContent = word;
+                    deckDisplay.appendChild(tag);
+                });
+            }
+        }
+
+        function renderIntroScreen() {
+            const introText = document.getElementById('intro-text');
+            const continueBtn = document.getElementById('intro-continue-btn');
+            
+            const narrative = `모든 것이 백지화되었다...
+
+당신은 에디터(Editor)입니다. 텍스트를 수정하고, 단어를 조합하여 이야기를 바꿀 수 있는 존재입니다.
+
+하지만 세상이 백지화되었습니다. 모든 의미가 사라지고, 단어들이 흩어졌습니다.
+
+당신의 임무는 세 개의 챕터를 통과하여 단어를 모으고, 마지막에 이야기의 결말을 짓는 것입니다.
+
+게임 방법:
+• 대괄호 [ ] 안의 단어를 클릭하여 수집하세요
+• 전투에서는 주어, 동사, 수식어를 조합하여 공격하세요
+• 퍼즐에서는 적절한 단어로 문맥을 수정하세요
+• 마지막에 모은 단어로 결말을 완성하세요`;
+
+            typewriterEffect(introText, narrative, 30, () => {
+                continueBtn.style.display = 'block';
+            });
+        }
+
+        function renderExploreScreen() {
+            const chapter = CHAPTERS[game.currentChapter];
+            
+            document.getElementById('chapter-title').textContent = chapter.title;
+            document.getElementById('chapter-subtitle').textContent = chapter.subtitle;
+            
+            const situationText = document.getElementById('situation-text');
+            situationText.innerHTML = '';
+            
+            const parts = parseSituationText(chapter.situation);
+            parts.forEach(part => {
+                if (part.type === 'word') {
+                    const btn = document.createElement('button');
+                    btn.className = 'word-button';
+                    btn.textContent = part.fullMatch;
+                    btn.onclick = () => mineWord(part.content);
+                    situationText.appendChild(btn);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = part.content;
+                    situationText.appendChild(span);
+                }
+            });
+            
+            updateDeckDisplay();
+            updateBars();
+        }
+
+        function mineWord(word) {
+            if (game.playerDeck.includes(word)) {
+                return;
+            }
+            
+            const buttons = document.querySelectorAll('.word-button');
+            buttons.forEach(btn => {
+                if (btn.textContent.includes(word)) {
+                    btn.classList.add('extracting');
+                    setTimeout(() => {
+                        btn.remove();
+                    }, 500);
+                }
+            });
+            
+            game.playerDeck.push(word);
+            updateDeckDisplay();
+        }
+
+        function renderCombatScreen() {
+            const chapter = CHAPTERS[game.currentChapter];
+            
+            document.getElementById('combat-chapter-title').textContent = `${chapter.title} - 전투`;
+            document.getElementById('enemy-name').textContent = chapter.enemy.name;
+            document.getElementById('enemy-desc').textContent = chapter.enemy.description;
+            
+            game.enemyHp = chapter.enemy.maxHp;
+            game.enemyMaxHp = chapter.enemy.maxHp;
+            game.drawHand();
+            
+            updateCombatDisplay();
+            updateBars();
+        }
+
+        function updateCombatDisplay() {
+            document.getElementById('slot-subject').textContent = game.combatSlots.subject || '비어있음';
+            document.getElementById('slot-subject').className = game.combatSlots.subject ? 'slot-content filled' : 'slot-content';
+            
+            document.getElementById('slot-verb').textContent = game.combatSlots.verb || '비어있음';
+            document.getElementById('slot-verb').className = game.combatSlots.verb ? 'slot-content filled' : 'slot-content';
+            
+            document.getElementById('slot-modifier').textContent = game.combatSlots.modifier || '선택사항';
+            document.getElementById('slot-modifier').className = game.combatSlots.modifier ? 'slot-content filled' : 'slot-content';
+            
+            const handDisplay = document.getElementById('hand-display');
+            handDisplay.innerHTML = '';
+            
+            game.playerHand.forEach(word => {
+                const tag = WORD_TAGS[word];
+                if (!tag) return;
+                
+                const btn = document.createElement('button');
+                btn.className = `hand-word ${tag.type}`;
+                btn.textContent = word;
+                
+                const isSelected = 
+                    (tag.category === 'subject' && game.combatSlots.subject === word) ||
+                    (tag.category === 'verb' && game.combatSlots.verb === word) ||
+                    (tag.category === 'modifier' && game.combatSlots.modifier === word);
+                
+                if (isSelected) {
+                    btn.classList.add('selected');
+                }
+                
+                btn.onclick = () => selectCombatWord(word, tag);
+                handDisplay.appendChild(btn);
+            });
+            
+            const action = calculateCombatAction();
+            const preview = document.getElementById('action-preview');
+            const executeBtn = document.getElementById('execute-btn');
+            
+            if (action && game.combatSlots.subject && game.combatSlots.verb) {
+                preview.innerHTML = `
+                    <p><strong>예상 효과:</strong></p>
+                    <p>${action.description}</p>
+                    ${action.damage > 0 ? `<p style="color: #c0392b;">데미지: ${action.damage}</p>` : ''}
+                    ${action.shield > 0 ? `<p style="color: #2980b9;">방어: ${action.shield}</p>` : ''}
+                    <p style="color: #666;">잉크 소모: ${action.cost}</p>
+                `;
+                preview.classList.add('show');
+                executeBtn.disabled = game.ink < action.cost || game.enemyHp <= 0;
+            } else {
+                preview.classList.remove('show');
+                executeBtn.disabled = true;
+            }
+        }
+
+        function selectCombatWord(word, tag) {
+            if (tag.category === 'subject') {
+                if (game.combatSlots.subject === word) {
+                    game.combatSlots.subject = null;
+                } else {
+                    game.combatSlots.subject = word;
+                }
+            } else if (tag.category === 'verb') {
+                if (game.combatSlots.verb === word) {
+                    game.combatSlots.verb = null;
+                } else {
+                    game.combatSlots.verb = word;
+                }
+            } else if (tag.category === 'modifier') {
+                if (game.combatSlots.modifier === word) {
+                    game.combatSlots.modifier = null;
+                } else {
+                    game.combatSlots.modifier = word;
+                }
+            }
+            
+            updateCombatDisplay();
+        }
+
+        function calculateCombatAction() {
+            const { subject, verb, modifier } = game.combatSlots;
+            if (!subject || !verb) return null;
+
+            const subjectTag = WORD_TAGS[subject] || {};
+            const verbTag = WORD_TAGS[verb] || {};
+            const modifierTag = modifier ? (WORD_TAGS[modifier] || {}) : {};
+
+            let damage = 0;
+            let shield = 0;
+            let description = '';
+            let cost = (subjectTag.cost || 0) + (verbTag.cost || 0) + (modifierTag.cost || 0);
+
+            if (verbTag.action === 'attack') {
+                damage = verbTag.power || 5;
+                if (subjectTag.element === 'wood' && modifierTag.element === 'ice') {
+                    damage += 3;
+                    description = `${subject}에서 ${verb}하는 얼음 공격!`;
+                } else if (subjectTag.element === 'earth') {
+                    damage += 2;
+                    description = `${subject}로 ${verb}하는 대지의 힘!`;
+                } else if (modifierTag.size === 'large') {
+                    damage += 5;
+                    description = `${modifier} ${subject}로 ${verb}!`;
+                } else {
+                    description = `${subject}로 ${verb}!`;
+                }
+            } else if (verbTag.action === 'defend') {
+                shield = verbTag.shield || 10;
+                if (modifierTag.size === 'large') shield += 5;
+                description = `${subject}로 ${verb}하는 방어!`;
+            } else if (verbTag.action === 'dodge') {
+                shield = 5;
+                description = `${verb}로 회피!`;
+            }
+
+            return { damage, shield, description, cost };
+        }
+
+        function executeCombat() {
+            const action = calculateCombatAction();
+            if (!action) return;
+
+            if (game.ink < action.cost) {
+                alert('잉크가 부족합니다!');
+                return;
+            }
+
+            game.ink -= action.cost;
+
+            if (action.damage > 0) {
+                game.enemyHp = Math.max(0, game.enemyHp - action.damage);
+            }
+
+            if (game.enemyHp > 0) {
+                const chapter = CHAPTERS[game.currentChapter];
+                const enemyAttack = chapter.enemy.attack;
+                game.playerHp = Math.max(0, game.playerHp - enemyAttack);
+                
+                document.body.classList.add('whiteout');
+                setTimeout(() => {
+                    document.body.classList.remove('whiteout');
+                }, 300);
+            }
+
+            updateBars();
+            updateCombatDisplay();
+
+            if (game.enemyHp <= 0) {
+                setTimeout(() => {
+                    if (game.currentChapter < CHAPTERS.length - 1) {
+                        game.currentChapter++;
+                        game.ink = game.maxInk;
+                        game.combatSlots = { subject: null, verb: null, modifier: null };
+                        game.changeState(GAME_STATES.CHAPTER_EXPLORE);
+                    } else {
+                        game.changeState(GAME_STATES.ENDING_CRAFTING);
+                    }
+                }, 1500);
+            }
+
+            if (game.playerHp <= 0) {
+                setTimeout(() => {
+                    game.changeState(GAME_STATES.GAME_OVER);
+                }, 1000);
+            }
+        }
+
+        function renderPuzzleScreen() {
+            const chapter = CHAPTERS[game.currentChapter];
+            
+            document.getElementById('puzzle-chapter-title').textContent = `${chapter.title} - 퍼즐`;
+            
+            const puzzleText = document.getElementById('puzzle-text');
+            const puzzle = chapter.puzzle;
+            
+            puzzleText.innerHTML = puzzle.text.split('[').map((part, idx) => {
+                if (part.includes(']')) {
+                    const [word, rest] = part.split(']');
+                    if (game.puzzleSolved) {
+                        return `<span style="padding: 5px 10px; background: #c8e6c9; border-radius: 3px;">${word}</span>${rest}`;
+                    } else {
+                        return `<span style="padding: 5px 10px; background: #FFD700; border-radius: 3px;">[${word}]</span>${rest}`;
+                    }
+                }
+                return part;
+            }).join('');
+            
+            const solutionsDiv = document.getElementById('puzzle-solutions');
+            solutionsDiv.innerHTML = '';
+            
+            if (!game.puzzleSolved) {
+                puzzle.solutions.forEach(solution => {
+                    const div = document.createElement('div');
+                    div.className = 'puzzle-solution';
+                    if (!game.playerDeck.includes(solution.word)) {
+                        div.classList.add('disabled');
+                    }
+                    div.innerHTML = `
+                        <strong>${solution.word}</strong>
+                        ${!game.playerDeck.includes(solution.word) ? '<span style="color: #999;"> (수집 필요)</span>' : ''}
+                    `;
+                    div.onclick = () => {
+                        if (game.playerDeck.includes(solution.word)) {
+                            solvePuzzle(solution.word);
+                        }
+                    };
+                    solutionsDiv.appendChild(div);
+                });
+            } else {
+                const resultDiv = document.getElementById('puzzle-result');
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = '퍼즐 해결! 문맥이 바뀌었습니다.';
+                
+                setTimeout(() => {
+                    game.changeState(GAME_STATES.ENDING_CRAFTING);
+                }, 2000);
+            }
+        }
+
+        function solvePuzzle(solutionWord) {
+            if (game.playerDeck.includes(solutionWord)) {
+                game.puzzleSolved = true;
+                renderPuzzleScreen();
+            }
+        }
+
+        function renderEndingScreen() {
+            const endingSentence = document.getElementById('ending-sentence');
+            endingSentence.innerHTML = `
+                <p>세상은 <span class="ending-word-slot ${game.endingWords[0] ? '' : 'empty'}">${game.endingWords[0] || '____'}</span> 하고,</p>
+                <p>사람들은 <span class="ending-word-slot ${game.endingWords[1] ? '' : 'empty'}">${game.endingWords[1] || '____'}</span> 하며,</p>
+                <p>이야기는 <span class="ending-word-slot ${game.endingWords[2] ? '' : 'empty'}">${game.endingWords[2] || '____'}</span> 끝났다.</p>
+            `;
+            
+            const wordsDiv = document.getElementById('ending-words');
+            wordsDiv.innerHTML = '';
+            
+            const availableWords = game.playerDeck.filter(word => {
+                const tag = WORD_TAGS[word];
+                return tag && tag.type === 'adjective';
+            });
+            
+            availableWords.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = 'ending-word-btn';
+                if (game.endingWords.includes(word)) {
+                    btn.classList.add('selected');
+                }
+                btn.textContent = word;
+                btn.onclick = () => {
+                    if (game.endingWords.includes(word)) {
+                        game.endingWords = game.endingWords.filter(w => w !== word);
+                    } else if (game.endingWords.length < 3) {
+                        game.endingWords.push(word);
+                    }
+                    renderEndingScreen();
+                };
+                wordsDiv.appendChild(btn);
+            });
+            
+            const craftBtn = document.getElementById('craft-ending-btn');
+            craftBtn.disabled = game.endingWords.length < 3;
+        }
+
+        function craftEnding() {
+            if (game.endingWords.length < 3) return;
+            
+            let score = 0;
+            game.endingWords.forEach(word => {
+                const tag = WORD_TAGS[word];
+                if (tag) {
+                    score += tag.value || 0;
+                }
+            });
+            
+            game.endingScore = score;
+            
+            if (score >= ENDING_TEMPLATES.happy.threshold) {
+                game.endingType = 'happy';
+            } else if (score <= ENDING_TEMPLATES.sad.threshold) {
+                game.endingType = 'sad';
+            } else {
+                game.endingType = 'abstract';
+            }
+            
+            game.changeState(GAME_STATES.SUCCESS);
+            renderSuccessScreen();
+        }
+
+        function renderSuccessScreen() {
+            const ending = ENDING_TEMPLATES[game.endingType];
+            const finalText = ending.text
+                .replace('{word1}', game.endingWords[0] || '')
+                .replace('{word2}', game.endingWords[1] || '')
+                .replace('{word3}', game.endingWords[2] || '');
+            
+            document.getElementById('ending-title').textContent = ending.title;
+            document.getElementById('ending-text').textContent = finalText;
+            document.getElementById('ending-score').textContent = `점수: ${game.endingScore}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('start-btn').onclick = () => {
+                game.changeState(GAME_STATES.INTRO_NARRATIVE);
+                renderIntroScreen();
+            };
+            
+            document.getElementById('intro-continue-btn').onclick = () => {
+                game.currentChapter = 0;
+                game.changeState(GAME_STATES.CHAPTER_EXPLORE);
+                renderExploreScreen();
+            };
+            
+            document.getElementById('explore-continue-btn').onclick = () => {
+                const chapter = CHAPTERS[game.currentChapter];
+                if (chapter.type === 'puzzle') {
+                    game.changeState(GAME_STATES.CHAPTER_PUZZLE);
+                    renderPuzzleScreen();
+                } else {
+                    game.changeState(GAME_STATES.CHAPTER_COMBAT);
+                    renderCombatScreen();
+                }
+            };
+            
+            document.getElementById('execute-btn').onclick = executeCombat;
+            document.getElementById('craft-ending-btn').onclick = craftEnding;
+            
+            document.getElementById('restart-btn').onclick = () => {
+                game.reset();
+                game.updateScreen();
+            };
+            
+            document.getElementById('restart-gameover-btn').onclick = () => {
+                game.reset();
+                game.updateScreen();
+            };
+            
+            game.updateScreen();
+        });
+    </script>
+</body>
+</html>
