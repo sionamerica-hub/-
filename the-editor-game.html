@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Editor - 텍스트 로그라이크 어드벤처</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        
+        * {
+            font-family: 'Courier Prime', 'Courier New', monospace;
+        }
+        
+        @keyframes typewriter {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        @keyframes whiteout {
+            0% { background-color: #F5F5DC; }
+            50% { background-color: #FFFFFF; }
+            100% { background-color: #F5F5DC; }
+        }
+        
+        @keyframes wordExtract {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
+            100% { transform: scale(0) rotate(-10deg); opacity: 0; }
+        }
+        
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid #2F2F2F;
+            white-space: nowrap;
+            animation: typewriter 2s steps(40, end), blink 1s step-end infinite;
+        }
+        
+        .typewriter-complete {
+            border-right: none;
+        }
+        
+        .whiteout {
+            animation: whiteout 0.3s ease-in-out;
+        }
+        
+        .word-extract {
+            animation: wordExtract 0.5s ease-out forwards;
+        }
+        
+        .paper-texture {
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-[#F5F5DC] text-[#2F2F2F] min-h-screen paper-texture">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { Type, Zap, Shield, Heart, BookOpen, Edit3, CheckCircle, XCircle } = lucide;
+
+        // 게임 상태
+        const GAME_STATES = {
+            START_SCREEN: 'START_SCREEN',
+            INTRO_NARRATIVE: 'INTRO_NARRATIVE',
+            CHAPTER_EXPLORE: 'CHAPTER_EXPLORE',
+            CHAPTER_COMBAT: 'CHAPTER_COMBAT',
+            CHAPTER_PUZZLE: 'CHAPTER_PUZZLE',
+            ENDING_CRAFTING: 'ENDING_CRAFTING',
+            GAME_OVER: 'GAME_OVER',
+            SUCCESS: 'SUCCESS'
+        };
+
+        // 챕터 데이터
+        const CHAPTERS = [
+            {
+                id: 1,
+                title: '명사의 숲',
+                subtitle: 'The Forest of Nouns',
+                situation: '희미한 [안개] 숲. 이름 없는 [나무]가 길을 막고 있다. [돌]이 발밑에 굴러다닌다. [나]는 길을 잃었다.',
+                mineableWords: ['안개', '나무', '돌', '나'],
+                enemy: {
+                    name: '형체 없는 그림자',
+                    hp: 30,
+                    maxHp: 30,
+                    attack: 5,
+                    description: '텍스트의 의미를 잃어버린 존재'
+                },
+                type: 'explore'
+            },
+            {
+                id: 2,
+                title: '동사의 탑',
+                subtitle: 'The Tower of Verbs',
+                situation: '거대한 탑이 하늘을 [찌르다]. 적들이 우리를 [추격하다]. [막다]로 방어하고, [부수다]로 공격하라. [달리다]로 도망칠 수도 있다.',
+                mineableWords: ['찌르다', '추격하다', '막다', '부수다', '달리다'],
+                enemy: {
+                    name: '검열관',
+                    hp: 50,
+                    maxHp: 50,
+                    attack: 8,
+                    description: '모든 동사를 통제하려는 자'
+                },
+                type: 'combat'
+            },
+            {
+                id: 3,
+                title: '형용사의 바다',
+                subtitle: 'The Sea of Adjectives',
+                situation: '[우울한] 파도가 친다. 바다는 [끝없는] 깊이를 가졌다. [차가운] 바람이 불어온다. [거대한] 고래가 나타났다.',
+                mineableWords: ['우울한', '끝없는', '차가운', '거대한', '신성한'],
+                puzzle: {
+                    text: '파도가 [거칠게] 몰아친다',
+                    target: '거칠게',
+                    solutions: [
+                        { word: '잠잠하게', type: 'peaceful' },
+                        { word: '얼어붙은', type: 'frozen' },
+                        { word: '따뜻하게', type: 'warm' }
+                    ]
+                },
+                type: 'puzzle'
+            }
+        };
+
+        // 단어 태그 시스템
+        const WORD_TAGS = {
+            '나': { type: 'noun', element: 'self', cost: 2 },
+            '안개': { type: 'noun', element: 'mist', cost: 3 },
+            '나무': { type: 'noun', element: 'wood', cost: 3 },
+            '돌': { type: 'noun', element: 'earth', cost: 2 },
+            '찌르다': { type: 'verb', action: 'attack', power: 8, cost: 5 },
+            '추격하다': { type: 'verb', action: 'chase', power: 3, cost: 4 },
+            '막다': { type: 'verb', action: 'defend', shield: 10, cost: 4 },
+            '부수다': { type: 'verb', action: 'attack', power: 12, cost: 6 },
+            '달리다': { type: 'verb', action: 'dodge', cost: 3 },
+            '우울한': { type: 'adjective', mood: 'sad', value: -1 },
+            '끝없는': { type: 'adjective', mood: 'abstract', value: 0 },
+            '차가운': { type: 'adjective', element: 'ice', value: 0 },
+            '거대한': { type: 'adjective', size: 'large', value: 1 },
+            '신성한': { type: 'adjective', mood: 'holy', value: 2 },
+            '거칠게': { type: 'adjective', mood: 'chaos', value: -1 },
+            '잠잠하게': { type: 'adjective', mood: 'peaceful', value: 1 },
+            '얼어붙은': { type: 'adjective', element: 'ice', value: 0 },
+            '따뜻하게': { type: 'adjective', mood: 'warm', value: 1 }
+        };
+
+        // 엔딩 템플릿
+        const ENDING_TEMPLATES = {
+            happy: {
+                title: '희망의 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 모든 것이 평화롭게 이어졌다.',
+                threshold: 3
+            },
+            sad: {
+                title: '슬픈 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 하지만 희망은 남아있었다.',
+                threshold: -2
+            },
+            abstract: {
+                title: '모호한 결말',
+                text: '세상은 {word1} 하고, 사람들은 {word2} 하며, 이야기는 {word3} 끝났다. 의미는 각자에게 달려있었다.',
+                threshold: -1
+            }
+        };
+
+        function TheEditor() {
+            const [gameState, setGameState] = useState(GAME_STATES.START_SCREEN);
+            const [currentChapter, setCurrentChapter] = useState(0);
+            const [playerDeck, setPlayerDeck] = useState([]);
+            const [playerHand, setPlayerHand] = useState([]);
+            const [playerHp, setPlayerHp] = useState(100);
+            const [playerMaxHp, setPlayerMaxHp] = useState(100);
+            const [ink, setInk] = useState(20);
+            const [maxInk, setMaxInk] = useState(20);
+            const [enemyHp, setEnemyHp] = useState(0);
+            const [enemyMaxHp, setEnemyMaxHp] = useState(0);
+            const [combatSlots, setCombatSlots] = useState({ subject: null, verb: null, modifier: null });
+            const [typewriterText, setTypewriterText] = useState('');
+            const [typewriterComplete, setTypewriterComplete] = useState(false);
+            const [whiteout, setWhiteout] = useState(false);
+            const [puzzleSolved, setPuzzleSolved] = useState(false);
+            const [endingWords, setEndingWords] = useState([]);
+            const [endingScore, setEndingScore] = useState(0);
+            const [endingType, setEndingType] = useState('abstract');
+            
+            const typewriterRef = useRef(null);
+            const situationTextRef = useRef(null);
+
+            // 타자기 효과
+            useEffect(() => {
+                if (typewriterText && !typewriterComplete) {
+                    const timer = setTimeout(() => {
+                        setTypewriterComplete(true);
+                    }, typewriterText.length * 50 + 500);
+                    return () => clearTimeout(timer);
+                }
+            }, [typewriterText, typewriterComplete]);
+
+            // 상황 텍스트 파싱 ([] 감싸진 단어 찾기)
+            const parseSituationText = (text) => {
+                const parts = [];
+                const regex = /\[([^\]]+)\]/g;
+                let lastIndex = 0;
+                let match;
+
+                while ((match = regex.exec(text)) !== null) {
+                    if (match.index > lastIndex) {
+                        parts.push({
+                            type: 'text',
+                            content: text.substring(lastIndex, match.index)
+                        });
+                    }
+                    parts.push({
+                        type: 'word',
+                        content: match[1],
+                        fullMatch: match[0]
+                    });
+                    lastIndex = regex.lastIndex;
+                }
+
+                if (lastIndex < text.length) {
+                    parts.push({
+                        type: 'text',
+                        content: text.substring(lastIndex)
+                    });
+                }
+
+                return parts;
+            };
+
+            // 단어 채굴
+            const mineWord = (word) => {
+                if (playerDeck.includes(word)) return;
+                
+                setPlayerDeck([...playerDeck, word]);
+                
+                // 애니메이션 효과
+                const wordElement = document.querySelector(`[data-word="${word}"]`);
+                if (wordElement) {
+                    wordElement.classList.add('word-extract');
+                    setTimeout(() => {
+                        wordElement.remove();
+                    }, 500);
+                }
+            };
+
+            // 전투: 문장 조합 계산
+            const calculateCombatAction = () => {
+                const { subject, verb, modifier } = combatSlots;
+                if (!subject || !verb) return null;
+
+                const subjectTag = WORD_TAGS[subject] || {};
+                const verbTag = WORD_TAGS[verb] || {};
+                const modifierTag = modifier ? (WORD_TAGS[modifier] || {}) : {};
+
+                let damage = 0;
+                let shield = 0;
+                let description = '';
+                let cost = (subjectTag.cost || 0) + (verbTag.cost || 0) + (modifierTag.cost || 0);
+
+                // 동사 기반 액션
+                if (verbTag.action === 'attack') {
+                    damage = verbTag.power || 5;
+                    if (subjectTag.element === 'fire' || modifierTag.element === 'fire') {
+                        damage += 5;
+                        description = `${subject}에서 ${verb}하는 화염 공격!`;
+                    } else if (subjectTag.element === 'earth' || modifierTag.element === 'earth') {
+                        damage += 3;
+                        description = `${subject}로 ${verb}하는 대지의 힘!`;
+                    } else {
+                        description = `${subject}로 ${verb}!`;
+                    }
+                } else if (verbTag.action === 'defend') {
+                    shield = verbTag.shield || 10;
+                    if (modifierTag.size === 'large') shield += 5;
+                    description = `${subject}로 ${verb}하는 방어!`;
+                } else if (verbTag.action === 'dodge') {
+                    shield = 5;
+                    description = `${verb}로 회피!`;
+                }
+
+                return { damage, shield, description, cost };
+            };
+
+            // 전투 실행
+            const executeCombat = () => {
+                const action = calculateCombatAction();
+                if (!action) return;
+
+                if (ink < action.cost) {
+                    alert('잉크가 부족합니다!');
+                    return;
+                }
+
+                setInk(ink - action.cost);
+
+                if (action.damage > 0) {
+                    setEnemyHp(Math.max(0, enemyHp - action.damage));
+                }
+
+                if (action.shield > 0) {
+                    // 방어는 다음 턴까지 유지
+                }
+
+                // 적 공격
+                if (enemyHp > 0) {
+                    const chapter = CHAPTERS[currentChapter];
+                    const enemyAttack = chapter.enemy.attack;
+                    setPlayerHp(Math.max(0, playerHp - enemyAttack));
+                    setWhiteout(true);
+                    setTimeout(() => setWhiteout(false), 300);
+                }
+
+                // 전투 승리 체크
+                if (enemyHp <= 0) {
+                    setTimeout(() => {
+                        if (currentChapter < CHAPTERS.length - 1) {
+                            setCurrentChapter(currentChapter + 1);
+                            setGameState(GAME_STATES.CHAPTER_EXPLORE);
+                            setCombatSlots({ subject: null, verb: null, modifier: null });
+                            setInk(maxInk);
+                        } else {
+                            setGameState(GAME_STATES.ENDING_CRAFTING);
+                        }
+                    }, 1500);
+                }
+
+                setCombatSlots({ subject: null, verb: null, modifier: null });
+            };
+
+            // 퍼즐 해결
+            const solvePuzzle = (solutionWord) => {
+                const chapter = CHAPTERS[currentChapter];
+                if (chapter.puzzle && playerDeck.includes(solutionWord)) {
+                    setPuzzleSolved(true);
+                    setTimeout(() => {
+                        setGameState(GAME_STATES.ENDING_CRAFTING);
+                    }, 2000);
+                }
+            };
+
+            // 엔딩 크래프팅
+            const craftEnding = (words) => {
+                if (words.length < 3) return;
+
+                setEndingWords(words);
+                
+                // 점수 계산
+                let score = 0;
+                words.forEach(word => {
+                    const tag = WORD_TAGS[word];
+                    if (tag) {
+                        score += tag.value || 0;
+                    }
+                });
+
+                setEndingScore(score);
+
+                // 엔딩 타입 결정
+                let ending = 'abstract';
+                if (score >= ENDING_TEMPLATES.happy.threshold) {
+                    ending = 'happy';
+                } else if (score <= ENDING_TEMPLATES.sad.threshold) {
+                    ending = 'sad';
+                }
+
+                setEndingType(ending);
+                setGameState(GAME_STATES.SUCCESS);
+            };
+
+            // 렌더링 함수들
+            const renderStartScreen = () => (
+                <div className="flex flex-col items-center justify-center min-h-screen p-8">
+                    <div className="text-center mb-12">
+                        <Type className="w-24 h-24 mx-auto mb-6 text-[#2F2F2F]" />
+                        <h1 className="text-6xl font-bold mb-4">THE EDITOR</h1>
+                        <p className="text-2xl text-gray-600">텍스트가 곧 물리 법칙인 세계</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setGameState(GAME_STATES.INTRO_NARRATIVE);
+                            setTypewriterText('모든 것이 백지화되었다...');
+                            setTypewriterComplete(false);
+                        }}
+                        className="px-8 py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors"
+                    >
+                        시작하기
+                    </button>
+                </div>
+            );
+
+            const renderIntroNarrative = () => (
+                <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-4xl mx-auto">
+                    <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                        <h2 className="text-3xl font-bold mb-6">프롤로그</h2>
+                        <div className="space-y-4 text-lg leading-relaxed">
+                            <p className={typewriterComplete ? 'typewriter-complete' : 'typewriter'}>
+                                {typewriterText}
+                            </p>
+                            {typewriterComplete && (
+                                <>
+                                    <p className="mt-4">당신은 에디터(Editor)입니다. 텍스트를 수정하고, 단어를 조합하여 이야기를 바꿀 수 있는 존재입니다.</p>
+                                    <p className="mt-4">하지만 세상이 백지화되었습니다. 모든 의미가 사라지고, 단어들이 흩어졌습니다.</p>
+                                    <p className="mt-4">당신의 임무는 세 개의 챕터를 통과하여 단어를 모으고, 마지막에 이야기의 결말을 짓는 것입니다.</p>
+                                    <p className="mt-4 font-bold">게임 방법:</p>
+                                    <ul className="list-disc list-inside ml-4 space-y-2">
+                                        <li>대괄호 [ ] 안의 단어를 클릭하여 수집하세요</li>
+                                        <li>전투에서는 주어, 동사, 수식어를 조합하여 공격하세요</li>
+                                        <li>퍼즐에서는 적절한 단어로 문맥을 수정하세요</li>
+                                        <li>마지막에 모은 단어로 결말을 완성하세요</li>
+                                    </ul>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    {typewriterComplete && (
+                        <button
+                            onClick={() => {
+                                setGameState(GAME_STATES.CHAPTER_EXPLORE);
+                                setCurrentChapter(0);
+                                setTypewriterText('');
+                                setTypewriterComplete(false);
+                            }}
+                            className="px-8 py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors"
+                        >
+                            챕터 1 시작
+                        </button>
+                    )}
+                </div>
+            );
+
+            const renderChapterExplore = () => {
+                const chapter = CHAPTERS[currentChapter];
+                const parts = parseSituationText(chapter.situation);
+
+                return (
+                    <div className="min-h-screen p-8">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="mb-8 text-center">
+                                <h2 className="text-4xl font-bold mb-2">{chapter.title}</h2>
+                                <p className="text-xl text-gray-600">{chapter.subtitle}</p>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                                <h3 className="text-2xl font-bold mb-4">상황</h3>
+                                <div className="text-lg leading-relaxed" ref={situationTextRef}>
+                                    {parts.map((part, idx) => (
+                                        part.type === 'word' ? (
+                                            <button
+                                                key={idx}
+                                                data-word={part.content}
+                                                onClick={() => mineWord(part.content)}
+                                                className="inline-block mx-1 px-2 py-1 bg-yellow-200 hover:bg-yellow-300 rounded transition-colors font-bold"
+                                            >
+                                                [{part.content}]
+                                            </button>
+                                        ) : (
+                                            <span key={idx}>{part.content}</span>
+                                        )
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="bg-white p-6 rounded-lg shadow-lg">
+                                    <h3 className="text-xl font-bold mb-4 flex items-center">
+                                        <BookOpen className="w-5 h-5 mr-2" />
+                                        수집한 단어 덱
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {playerDeck.map((word, idx) => (
+                                            <span key={idx} className="px-3 py-1 bg-gray-200 rounded text-sm">
+                                                {word}
+                                            </span>
+                                        ))}
+                                        {playerDeck.length === 0 && (
+                                            <p className="text-gray-500">아직 수집한 단어가 없습니다</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-lg shadow-lg">
+                                    <h3 className="text-xl font-bold mb-4 flex items-center">
+                                        <Heart className="w-5 h-5 mr-2" />
+                                        상태
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <div className="flex justify-between mb-1">
+                                                <span>체력</span>
+                                                <span>{playerHp}/{playerMaxHp}</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-4">
+                                                <div 
+                                                    className="bg-red-500 h-4 rounded-full transition-all"
+                                                    style={{ width: `${(playerHp / playerMaxHp) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between mb-1">
+                                                <span>잉크</span>
+                                                <span>{ink}/{maxInk}</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-4">
+                                                <div 
+                                                    className="bg-blue-500 h-4 rounded-full transition-all"
+                                                    style={{ width: `${(ink / maxInk) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <button
+                                    onClick={() => {
+                                        if (chapter.type === 'combat' || chapter.type === 'explore') {
+                                            setEnemyHp(chapter.enemy.maxHp);
+                                            setEnemyMaxHp(chapter.enemy.maxHp);
+                                            setGameState(GAME_STATES.CHAPTER_COMBAT);
+                                        } else if (chapter.type === 'puzzle') {
+                                            setGameState(GAME_STATES.CHAPTER_PUZZLE);
+                                        }
+                                    }}
+                                    className="px-8 py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors"
+                                >
+                                    {chapter.type === 'puzzle' ? '퍼즐 시작' : '전투 시작'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderChapterCombat = () => {
+                const chapter = CHAPTERS[currentChapter];
+                const action = calculateCombatAction();
+                const availableWords = playerDeck.filter(word => {
+                    const tag = WORD_TAGS[word];
+                    return tag && (tag.type === 'noun' || tag.type === 'verb' || tag.type === 'adjective');
+                });
+
+                return (
+                    <div className={`min-h-screen p-8 ${whiteout ? 'whiteout' : ''}`}>
+                        <div className="max-w-6xl mx-auto">
+                            <div className="mb-8 text-center">
+                                <h2 className="text-4xl font-bold mb-2">{chapter.title} - 전투</h2>
+                            </div>
+
+                            {/* 적 정보 */}
+                            <div className="bg-red-100 p-6 rounded-lg shadow-lg mb-8 border-2 border-red-300">
+                                <h3 className="text-2xl font-bold mb-2 text-red-800">{chapter.enemy.name}</h3>
+                                <p className="text-gray-600 mb-4">{chapter.enemy.description}</p>
+                                <div className="flex justify-between mb-2">
+                                    <span>체력</span>
+                                    <span>{enemyHp}/{enemyMaxHp}</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                    <div 
+                                        className="bg-red-600 h-6 rounded-full transition-all"
+                                        style={{ width: `${(enemyHp / enemyMaxHp) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 조합 슬롯 */}
+                            <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                                <h3 className="text-xl font-bold mb-4 flex items-center">
+                                    <Edit3 className="w-5 h-5 mr-2" />
+                                    문장 조합
+                                </h3>
+                                <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="border-2 border-dashed border-gray-300 p-4 rounded text-center min-h-[100px] flex items-center justify-center">
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-2">주어</p>
+                                            {combatSlots.subject ? (
+                                                <span className="px-3 py-1 bg-blue-200 rounded">{combatSlots.subject}</span>
+                                            ) : (
+                                                <span className="text-gray-400">비어있음</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="border-2 border-dashed border-gray-300 p-4 rounded text-center min-h-[100px] flex items-center justify-center">
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-2">동사</p>
+                                            {combatSlots.verb ? (
+                                                <span className="px-3 py-1 bg-red-200 rounded">{combatSlots.verb}</span>
+                                            ) : (
+                                                <span className="text-gray-400">비어있음</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="border-2 border-dashed border-gray-300 p-4 rounded text-center min-h-[100px] flex items-center justify-center">
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-2">수식어</p>
+                                            {combatSlots.modifier ? (
+                                                <span className="px-3 py-1 bg-green-200 rounded">{combatSlots.modifier}</span>
+                                            ) : (
+                                                <span className="text-gray-400">선택사항</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {action && (
+                                    <div className="bg-yellow-50 p-4 rounded mb-4 border border-yellow-300">
+                                        <p className="font-bold mb-2">예상 효과:</p>
+                                        <p>{action.description}</p>
+                                        {action.damage > 0 && (
+                                            <p className="text-red-600">데미지: {action.damage}</p>
+                                        )}
+                                        {action.shield > 0 && (
+                                            <p className="text-blue-600">방어: {action.shield}</p>
+                                        )}
+                                        <p className="text-gray-600">잉크 소모: {action.cost}</p>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={executeCombat}
+                                    disabled={!combatSlots.subject || !combatSlots.verb || (action && ink < action.cost)}
+                                    className="w-full py-3 bg-[#2F2F2F] text-[#F5F5DC] text-lg font-bold rounded hover:bg-[#1a1a1a] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {enemyHp <= 0 ? '승리!' : '실행'}
+                                </button>
+                            </div>
+
+                            {/* 손패 */}
+                            <div className="bg-white p-6 rounded-lg shadow-lg">
+                                <h3 className="text-xl font-bold mb-4">사용 가능한 단어</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableWords.map((word, idx) => {
+                                        const tag = WORD_TAGS[word];
+                                        const isNoun = tag && tag.type === 'noun';
+                                        const isVerb = tag && tag.type === 'verb';
+                                        const isAdjective = tag && tag.type === 'adjective';
+                                        
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => {
+                                                    if (isNoun && !combatSlots.subject) {
+                                                        setCombatSlots({ ...combatSlots, subject: word });
+                                                    } else if (isVerb && !combatSlots.verb) {
+                                                        setCombatSlots({ ...combatSlots, verb: word });
+                                                    } else if (isAdjective && !combatSlots.modifier) {
+                                                        setCombatSlots({ ...combatSlots, modifier: word });
+                                                    } else if (isNoun && combatSlots.subject === word) {
+                                                        setCombatSlots({ ...combatSlots, subject: null });
+                                                    } else if (isVerb && combatSlots.verb === word) {
+                                                        setCombatSlots({ ...combatSlots, verb: null });
+                                                    } else if (isAdjective && combatSlots.modifier === word) {
+                                                        setCombatSlots({ ...combatSlots, modifier: null });
+                                                    }
+                                                }}
+                                                className={`px-4 py-2 rounded transition-colors ${
+                                                    isNoun ? 'bg-blue-200 hover:bg-blue-300' :
+                                                    isVerb ? 'bg-red-200 hover:bg-red-300' :
+                                                    'bg-green-200 hover:bg-green-300'
+                                                } ${
+                                                    (isNoun && combatSlots.subject === word) ||
+                                                    (isVerb && combatSlots.verb === word) ||
+                                                    (isAdjective && combatSlots.modifier === word)
+                                                        ? 'ring-4 ring-yellow-400' : ''
+                                                }`}
+                                            >
+                                                {word}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 플레이어 상태 */}
+                            <div className="mt-8 grid grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-lg shadow-lg">
+                                    <div className="flex justify-between mb-2">
+                                        <span className="font-bold">체력</span>
+                                        <span>{playerHp}/{playerMaxHp}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-4">
+                                        <div 
+                                            className="bg-red-500 h-4 rounded-full transition-all"
+                                            style={{ width: `${(playerHp / playerMaxHp) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg shadow-lg">
+                                    <div className="flex justify-between mb-2">
+                                        <span className="font-bold">잉크</span>
+                                        <span>{ink}/{maxInk}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-4">
+                                        <div 
+                                            className="bg-blue-500 h-4 rounded-full transition-all"
+                                            style={{ width: `${(ink / maxInk) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderChapterPuzzle = () => {
+                const chapter = CHAPTERS[currentChapter];
+                const puzzle = chapter.puzzle;
+
+                return (
+                    <div className="min-h-screen p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="mb-8 text-center">
+                                <h2 className="text-4xl font-bold mb-2">{chapter.title} - 퍼즐</h2>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                                <h3 className="text-2xl font-bold mb-4">문맥 수정</h3>
+                                <div className="text-xl mb-6 p-4 bg-gray-50 rounded">
+                                    {puzzle.text.split('[').map((part, idx) => {
+                                        if (part.includes(']')) {
+                                            const [word, rest] = part.split(']');
+                                            return (
+                                                <span key={idx}>
+                                                    {puzzleSolved ? (
+                                                        <span className="px-2 py-1 bg-green-200 rounded">{word}</span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 bg-yellow-200 rounded">[{word}]</span>
+                                                    )}
+                                                    {rest}
+                                                </span>
+                                            );
+                                        }
+                                        return <span key={idx}>{part}</span>;
+                                    })}
+                                </div>
+
+                                {!puzzleSolved && (
+                                    <>
+                                        <p className="mb-4 text-gray-600">위 문장의 [거칠게]를 다른 단어로 교체하여 문맥을 바꾸세요.</p>
+                                        <div className="space-y-2">
+                                            {puzzle.solutions.map((solution, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => solvePuzzle(solution.word)}
+                                                    disabled={!playerDeck.includes(solution.word)}
+                                                    className={`w-full p-4 text-left rounded border-2 transition-colors ${
+                                                        playerDeck.includes(solution.word)
+                                                            ? 'border-blue-300 hover:bg-blue-50 cursor-pointer'
+                                                            : 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
+                                                    }`}
+                                                >
+                                                    <span className="font-bold">{solution.word}</span>
+                                                    {!playerDeck.includes(solution.word) && (
+                                                        <span className="text-gray-500 text-sm ml-2">(수집 필요)</span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {puzzleSolved && (
+                                    <div className="mt-6 p-4 bg-green-100 rounded border-2 border-green-300">
+                                        <p className="text-green-800 font-bold">퍼즐 해결! 문맥이 바뀌었습니다.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderEndingCrafting = () => {
+                const availableWords = playerDeck.filter(word => {
+                    const tag = WORD_TAGS[word];
+                    return tag && tag.type === 'adjective';
+                });
+
+                return (
+                    <div className="min-h-screen p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="mb-8 text-center">
+                                <Type className="w-16 h-16 mx-auto mb-4 text-[#2F2F2F]" />
+                                <h2 className="text-4xl font-bold mb-2">최종 편집</h2>
+                                <p className="text-xl text-gray-600">모은 단어로 이야기의 결말을 짓으세요</p>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                                <h3 className="text-2xl font-bold mb-4">결말 문장</h3>
+                                <div className="text-xl mb-6 p-6 bg-gray-50 rounded border-2 border-dashed">
+                                    <p>세상은 <span className="px-2 py-1 bg-blue-200 rounded">
+                                        {endingWords[0] || '____'}
+                                    </span> 하고,</p>
+                                    <p className="mt-2">사람들은 <span className="px-2 py-1 bg-blue-200 rounded">
+                                        {endingWords[1] || '____'}
+                                    </span> 하며,</p>
+                                    <p className="mt-2">이야기는 <span className="px-2 py-1 bg-blue-200 rounded">
+                                        {endingWords[2] || '____'}
+                                    </span> 끝났다.</p>
+                                </div>
+
+                                <div className="mb-6">
+                                    <h4 className="text-lg font-bold mb-3">사용 가능한 단어 (3개 선택)</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableWords.map((word, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => {
+                                                    if (endingWords.includes(word)) {
+                                                        setEndingWords(endingWords.filter(w => w !== word));
+                                                    } else if (endingWords.length < 3) {
+                                                        setEndingWords([...endingWords, word]);
+                                                    }
+                                                }}
+                                                className={`px-4 py-2 rounded transition-colors ${
+                                                    endingWords.includes(word)
+                                                        ? 'bg-green-400 ring-4 ring-green-600'
+                                                        : 'bg-gray-200 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                {word}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => craftEnding(endingWords)}
+                                    disabled={endingWords.length < 3}
+                                    className="w-full py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    결말 완성하기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderSuccess = () => {
+                const ending = ENDING_TEMPLATES[endingType];
+                const finalText = ending.text
+                    .replace('{word1}', endingWords[0] || '')
+                    .replace('{word2}', endingWords[1] || '')
+                    .replace('{word3}', endingWords[2] || '');
+
+                return (
+                    <div className="min-h-screen p-8 flex items-center justify-center">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <CheckCircle className="w-24 h-24 mx-auto mb-6 text-green-600" />
+                            <h2 className="text-5xl font-bold mb-4">{ending.title}</h2>
+                            <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                                <p className="text-2xl leading-relaxed mb-6">{finalText}</p>
+                                <p className="text-gray-600">점수: {endingScore}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setGameState(GAME_STATES.START_SCREEN);
+                                    setPlayerDeck([]);
+                                    setPlayerHp(100);
+                                    setPlayerMaxHp(100);
+                                    setInk(20);
+                                    setMaxInk(20);
+                                    setCurrentChapter(0);
+                                    setEndingWords([]);
+                                    setEndingScore(0);
+                                    setPuzzleSolved(false);
+                                }}
+                                className="px-8 py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors"
+                            >
+                                다시 시작하기
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderGameOver = () => (
+                <div className="min-h-screen p-8 flex items-center justify-center">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <XCircle className="w-24 h-24 mx-auto mb-6 text-red-600" />
+                        <h2 className="text-5xl font-bold mb-4">게임 오버</h2>
+                        <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                            <p className="text-2xl mb-6">당신의 체력이 0이 되었습니다.</p>
+                            <p className="text-gray-600">이야기는 미완성으로 남았습니다.</p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setGameState(GAME_STATES.START_SCREEN);
+                                setPlayerDeck([]);
+                                setPlayerHp(100);
+                                setPlayerMaxHp(100);
+                                setInk(20);
+                                setMaxInk(20);
+                                setCurrentChapter(0);
+                            }}
+                            className="px-8 py-4 bg-[#2F2F2F] text-[#F5F5DC] text-xl font-bold rounded hover:bg-[#1a1a1a] transition-colors"
+                        >
+                            다시 시작하기
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // 게임 오버 체크
+            useEffect(() => {
+                if (playerHp <= 0 && gameState !== GAME_STATES.GAME_OVER && gameState !== GAME_STATES.START_SCREEN) {
+                    setGameState(GAME_STATES.GAME_OVER);
+                }
+            }, [playerHp, gameState]);
+
+            // 메인 렌더링
+            return (
+                <div className={whiteout ? 'whiteout' : ''}>
+                    {gameState === GAME_STATES.START_SCREEN && renderStartScreen()}
+                    {gameState === GAME_STATES.INTRO_NARRATIVE && renderIntroNarrative()}
+                    {gameState === GAME_STATES.CHAPTER_EXPLORE && renderChapterExplore()}
+                    {gameState === GAME_STATES.CHAPTER_COMBAT && renderChapterCombat()}
+                    {gameState === GAME_STATES.CHAPTER_PUZZLE && renderChapterPuzzle()}
+                    {gameState === GAME_STATES.ENDING_CRAFTING && renderEndingCrafting()}
+                    {gameState === GAME_STATES.SUCCESS && renderSuccess()}
+                    {gameState === GAME_STATES.GAME_OVER && renderGameOver()}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<TheEditor />, document.getElementById('root'));
+    </script>
+</body>
+</html>
