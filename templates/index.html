@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babel: The Word Alchemist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Babel: The Word Alchemist</h1>
+            <button id="newGameBtn" class="btn-new-game">New Game</button>
+        </header>
+
+        <!-- Main Game Area -->
+        <div class="game-area">
+            <!-- Player Panel -->
+            <div class="panel player-panel">
+                <h2>Editor (You)</h2>
+                <div class="stat-bar">
+                    <label>Health</label>
+                    <div class="bar-container">
+                        <div class="bar hp-bar" id="playerHpBar">
+                            <span class="bar-text" id="playerHpText">100/100</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-bar">
+                    <label>Mana</label>
+                    <div class="bar-container">
+                        <div class="bar mana-bar" id="playerManaBar">
+                            <span class="bar-text" id="playerManaText">50/50</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-effects" id="playerStatus">
+                    <strong>Status:</strong> <span>None</span>
+                </div>
+            </div>
+
+            <!-- Center Panel - Word Selection -->
+            <div class="panel center-panel">
+                <div class="spell-preview">
+                    <h3>Selected Spell</h3>
+                    <div class="spell-display" id="spellDisplay">
+                        [Modifier] + [Core] + [Shape]
+                    </div>
+                    <div class="spell-info" id="spellInfo"></div>
+                </div>
+
+                <div class="word-selection">
+                    <div class="word-group">
+                        <h3 class="word-group-title modifier-title">Modifiers</h3>
+                        <div class="word-buttons" id="modifierButtons"></div>
+                    </div>
+                    <div class="word-group">
+                        <h3 class="word-group-title core-title">Cores</h3>
+                        <div class="word-buttons" id="coreButtons"></div>
+                    </div>
+                    <div class="word-group">
+                        <h3 class="word-group-title shape-title">Shapes</h3>
+                        <div class="word-buttons" id="shapeButtons"></div>
+                    </div>
+                </div>
+
+                <button id="castBtn" class="btn-cast">CAST SPELL</button>
+            </div>
+
+            <!-- Enemy Panel -->
+            <div class="panel enemy-panel">
+                <h2 id="enemyName">Goblin</h2>
+                <div class="stat-bar">
+                    <label>Health</label>
+                    <div class="bar-container">
+                        <div class="bar hp-bar" id="enemyHpBar">
+                            <span class="bar-text" id="enemyHpText">80/80</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-bar">
+                    <label>Mana</label>
+                    <div class="bar-container">
+                        <div class="bar mana-bar" id="enemyManaBar">
+                            <span class="bar-text" id="enemyManaText">20/20</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-effects" id="enemyStatus">
+                    <strong>Status:</strong> <span>None</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Combat Log -->
+        <div class="panel log-panel">
+            <h3>Combat Log</h3>
+            <div class="log-content" id="logContent"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>
